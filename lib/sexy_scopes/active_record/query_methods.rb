@@ -23,15 +23,31 @@ module SexyScopes
       #
       def where(*args, &block)
         if block
-          raise ArgumentError, "You can't use both arguments and a block" if args.any?
-          if block.arity.zero?
-            conditions = instance_exec(&block)
-          else
-            conditions = yield(self)
-          end
-          super(conditions)
+          super(build_conditions_from_block(args, block))
         else
           super
+        end
+      end
+
+      protected
+
+      def build_conditions_from_block(args, block)
+        raise ArgumentError, "You can't use both arguments and a block" if args.any?
+        if block.arity.zero?
+          instance_eval(&block)
+        else
+          block.call(self)
+        end
+      end
+
+      module WhereChainMethods
+        def not(*args, &block)
+          if block
+            conditions = @scope.send(:build_conditions_from_block, args, block)
+            @scope.where(conditions.not)
+          else
+            super
+          end
         end
       end
     end
